@@ -53,6 +53,7 @@ data StanCommand
 -- | Options used for the main @stan@ command.
 data StanArgs = StanArgs
     { stanArgsHiedir               :: !FilePath  -- ^ Directory with HIE files
+    , stanArgsOutputFile           :: !(Maybe FilePath)  -- ^ Filepath for JSON output
     , stanArgsCabalFilePath        :: ![FilePath]  -- ^ Path to @.cabal@ files.
     , stanArgsReportSettings       :: !ReportSettings  -- ^ Settings for report
     , stanArgsReport               :: !Bool  -- ^ Create @HTML@ report?
@@ -111,6 +112,7 @@ stanP = do
     stanArgsConfig <- configP
     stanArgsReport <- reportP
     stanArgsHiedir <- hiedirP
+    stanArgsOutputFile <- outputFileP
     stanArgsCabalFilePath <- cabalFilePathP
     stanArgsConfigFile <- configFileP
     stanArgsUseDefaultConfigFile <- useDefaultConfigFileP
@@ -175,6 +177,14 @@ hiedirP = strOption $ mconcat
     , value ".hie"
     , showDefaultWith (formatWith [blue, bold])
     , help "Relative path to the directory with HIE files"
+    ]
+
+outputFileP :: Parser (Maybe FilePath)
+outputFileP = optional $ strOption $ mconcat
+    [ long "outputFile"
+    , short 'o'
+    , metavar "FILE_PATH"
+    , help "Path for machine readable result output JSON file"
     ]
 
 cabalFilePathP :: Parser [FilePath]

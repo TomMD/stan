@@ -108,6 +108,7 @@ library
                            Stan.Inspection.Infinite
                            Stan.Inspection.Partial
                            Stan.Inspection.Style
+                         Stan.JSON
                          Stan.NameMeta
                          Stan.Observation
                            Stan.Pattern.Ast
@@ -124,6 +125,7 @@ library
   other-modules:       Paths_stan
 
   build-depends:       array ^>= 0.5
+                     , aeson
                      , base64 ^>= 0.4.1
                      , blaze-html ^>= 0.9.1
                      , bytestring ^>= 0.10

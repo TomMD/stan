@@ -35,6 +35,7 @@ import Stan.Info (ProjectInfo (..), StanEnv (..))
 import Stan.Inspection (Inspection (..), inspectionsMd, prettyShowInspection,
                         prettyShowInspectionShort)
 import Stan.Inspection.All (getInspectionById, inspections, lookupInspectionById)
+import Stan.JSON (saveOutput)
 import Stan.Observation (Observation (..), prettyShowIgnoredObservations)
 import Stan.Report (generateReport)
 import Stan.Severity (Severity (Error))
@@ -83,6 +84,7 @@ runStan StanArgs{..} = do
         then successMessage "All clean! Stan did not find any observations at the moment."
         else warningMessage "Stan found the following observations for the project:\n"
         putTextLn $ prettyShowAnalysis analysis stanArgsReportSettings
+        for_ stanArgsOutputFile (saveOutput analysis)
 
         -- report generation
         when stanArgsReport $ do
