@@ -14,6 +14,7 @@ module Stan.Cli
     , InspectionArgs (..)
     , TomlToCliArgs (..)
     , CliToTomlArgs (..)
+    , IsQuiet(..)
     , runStanCli
     , stanParserPrefs
     , stanCliParser
@@ -54,6 +55,7 @@ data StanCommand
 data StanArgs = StanArgs
     { stanArgsHiedir               :: !FilePath  -- ^ Directory with HIE files
     , stanArgsOutputFile           :: !(Maybe FilePath)  -- ^ Filepath for JSON output
+    , stanArgsQuiet                :: !IsQuiet
     , stanArgsCabalFilePath        :: ![FilePath]  -- ^ Path to @.cabal@ files.
     , stanArgsReportSettings       :: !ReportSettings  -- ^ Settings for report
     , stanArgsReport               :: !Bool  -- ^ Create @HTML@ report?
@@ -113,6 +115,7 @@ stanP = do
     stanArgsReport <- reportP
     stanArgsHiedir <- hiedirP
     stanArgsOutputFile <- outputFileP
+    stanArgsQuiet <- quietFlagP
     stanArgsCabalFilePath <- cabalFilePathP
     stanArgsConfigFile <- configFileP
     stanArgsUseDefaultConfigFile <- useDefaultConfigFileP
@@ -186,6 +189,10 @@ outputFileP = optional $ strOption $ mconcat
     , metavar "FILE_PATH"
     , help "Path for machine readable result output JSON file"
     ]
+
+data IsQuiet = Normal | Quiet deriving stock (Eq)
+quietFlagP :: Parser IsQuiet
+quietFlagP = flag Normal Quiet (long "quiet" <> short 'q' <> help "Make stan quiet")
 
 cabalFilePathP :: Parser [FilePath]
 cabalFilePathP = many $ strOption $ mconcat

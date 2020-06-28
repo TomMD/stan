@@ -24,6 +24,7 @@ import System.Directory (doesDirectoryExist, doesFileExist, getCurrentDirectory,
 import System.FilePath (takeExtension, (</>))
 import System.IO.Unsafe (unsafeInterleaveIO)
 
+import Stan.Cli (IsQuiet(..))
 import Stan.Hie.Compat (HieFile (..))
 
 import qualified Data.Map.Strict as Map
@@ -43,16 +44,18 @@ usedCabalFiles fs = do
 -}
 createCabalExtensionsMap
     :: [FilePath]  -- ^ @.cabal@ files
+    -> IsQuiet
     -> [HieFile]
     -> IO (Map FilePath (Either ExtensionsError ParsedExtensions))
-createCabalExtensionsMap cabalPath hies = case cabalPath of
+createCabalExtensionsMap cabalPath quiet hies = case cabalPath of
     -- if cabal files are not specified via CLI option
     -- try to find cabal files in current directory
     [] -> findCabalFiles >>= \case
         -- if cabal file is not found, pass the empty map instead
         [] -> do
-            warningMessage ".cabal file not found in the current directory."
-            infoMessage " 💡 Try using --cabal-file-path option to specify the path to the .cabal file.\n"
+            disquiet $ do
+                warningMessage ".cabal file not found in the current directory."
+                infoMessage " 💡 Try using --cabal-file-path option to specify the path to the .cabal file.\n"
             pure mempty
         -- else concat map for each @.cabal@ file.
         cabals -> mconcat <$> mapM getExtensionsWithCabal cabals
@@ -60,13 +63,14 @@ createCabalExtensionsMap cabalPath hies = case cabalPath of
     cabals -> fmap mconcat $ forM (ordNub cabals) $ \cabal ->
         ifM (doesFileExist cabal)
         {- then -} (getExtensionsWithCabal cabal)
-        {- else -} (errorMessage (".cabal file does not exist: " <> toText cabal) >> exitFailure)
+        {- else -} (disquiet (errorMessage (".cabal file does not exist: " <> toText cabal)) >> exitFailure)
   where
+    disquiet = when (quiet == Normal)
     getExtensionsWithCabal
         :: FilePath
         -> IO (Map FilePath (Either ExtensionsError ParsedExtensions))
     getExtensionsWithCabal cabal = do
-        infoMessage $ "Using the following .cabal file: " <> toText cabal <> "\n"
+        disquiet $ infoMessage $ "Using the following .cabal file: " <> toText cabal <> "\n"
         (Right <<$>> parseCabalFileExtensions cabal)
             `catch` handleCabalErr
       where

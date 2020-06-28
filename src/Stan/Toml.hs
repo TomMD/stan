@@ -27,6 +27,7 @@ import Stan.Category (Category (..))
 import Stan.Config (Check (..), CheckFilter (..), CheckType (..), ConfigP (..), PartialConfig,
                     Scope (..))
 import Stan.Core.Id (Id (..))
+import Stan.Cli (IsQuiet(..))
 import Stan.Inspection (Inspection (..))
 import Stan.Observation (Observation (..))
 import Stan.Severity (Severity (..))
@@ -55,8 +56,8 @@ usedTomlFiles useDefault mFile = do
     memptyIfNotExist :: FilePath -> IO [FilePath]
     memptyIfNotExist fp = ifM (doesFileExist fp) (pure [fp]) (pure [])
 
-getTomlConfig :: Bool -> Maybe FilePath -> IO PartialConfig
-getTomlConfig useDefault mTomlFile = do
+getTomlConfig :: Bool -> Maybe FilePath -> IsQuiet -> IO PartialConfig
+getTomlConfig useDefault mTomlFile quiet = do
     def <-
         if useDefault
         then defaultCurConfigFile >>= readToml >>= \case
@@ -69,12 +70,13 @@ getTomlConfig useDefault mTomlFile = do
         Just tomlFile -> (def <>) . inline <$> readToml tomlFile
         Nothing       -> pure def
   where
+    disquiet = unless (quiet == Quiet)
     readToml :: FilePath -> IO (Trial Text PartialConfig)
     readToml file = do
         isFile <- doesFileExist file
         if isFile
         then do
-            infoMessage $ "Reading Configurations from " <> toText file <> " ..."
+            disquiet $ infoMessage $ "Reading Configurations from " <> toText file <> " ..."
             pure <$> Toml.decodeFile configCodec file
         else pure $ fiasco $ "TOML Configurations file doesn't exist: " <> toText file
 

@@ -29,7 +29,12 @@ saveOutput
     :: Analysis
     -> FilePath
     -> IO ()
-saveOutput an outPath = writeFileLBS outPath (encode an)
+saveOutput an outPath =
+    case outPath of
+        "-" -> putTextLn (decodeUtf8 jsonBytes)
+        _   -> writeFileLBS outPath jsonBytes
+  where
+    jsonBytes = encode an
 
 instance ToJSON Analysis where
     toJSON = toJSON . Map.elems . analysisFileMap

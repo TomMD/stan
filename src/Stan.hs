@@ -24,7 +24,7 @@ import Stan.Analysis (Analysis (..), runAnalysis)
 import Stan.Analysis.Pretty (prettyShowAnalysis)
 import Stan.Cabal (createCabalExtensionsMap, usedCabalFiles)
 import Stan.Cli (CliToTomlArgs (..), InspectionArgs (..), StanArgs (..), StanCommand (..),
-                 TomlToCliArgs (..), runStanCli)
+                 TomlToCliArgs (..), runStanCli, IsQuiet(..))
 import Stan.Config (ConfigP (..), applyConfig, configToCliCommand, defaultConfig, finaliseConfig)
 import Stan.Config.Pretty (prettyConfigCli)
 import Stan.Core.Id (Id (..))
@@ -57,33 +57,35 @@ runStan StanArgs{..} = do
     -- ENV vars
     env@EnvVars{..} <- getEnvVars
     let defConfTrial = envVarsUseDefaultConfigFile <> stanArgsUseDefaultConfigFile
-    infoMessage "Checking environment variables and CLI arguments for default configurations file usage..."
-    putTextLn $ indent $ prettyTaggedTrial defConfTrial
+    disquiet $ do
+        infoMessage "Checking environment variables and CLI arguments for default configurations file usage..."
+        putTextLn $ indent $ prettyTaggedTrial defConfTrial
     let useDefConfig = maybe True snd (trialToMaybe defConfTrial)
     -- config
-    tomlConfig <- getTomlConfig useDefConfig stanArgsConfigFile
+    tomlConfig <- getTomlConfig useDefConfig stanArgsConfigFile stanArgsQuiet
     let configTrial = finaliseConfig $ defaultConfig <> tomlConfig <> stanArgsConfig
-    infoMessage "The following Configurations are used:\n"
-    putTextLn $ indent $ prettyTrialWith (toString . prettyConfigCli) configTrial
+    disquiet $ do
+        infoMessage "The following Configurations are used:\n"
+        putTextLn $ indent $ prettyTrialWith (toString . prettyConfigCli) configTrial
     whenResult_ configTrial $ \warnings config -> do
         hieFiles <- readHieFiles stanArgsHiedir
         -- create cabal default extensions map
-        cabalExtensionsMap <- createCabalExtensionsMap stanArgsCabalFilePath hieFiles
+        cabalExtensionsMap <- createCabalExtensionsMap stanArgsCabalFilePath stanArgsQuiet hieFiles
         -- get checks for each file
         let checksMap = applyConfig (map hie_hs_file hieFiles) config
 
         let analysis = runAnalysis cabalExtensionsMap checksMap (configIgnored config) hieFiles
         -- show what observations are ignored
-        putText $ indent $ prettyShowIgnoredObservations
+        disquiet $ putText $ indent $ prettyShowIgnoredObservations
             (configIgnored config)
             (analysisIgnoredObservations analysis)
         -- show the result
         let observations = analysisObservations analysis
         let isNullObs = null observations
-        if isNullObs
+        disquiet $ if isNullObs
         then successMessage "All clean! Stan did not find any observations at the moment."
         else warningMessage "Stan found the following observations for the project:\n"
-        putTextLn $ prettyShowAnalysis analysis stanArgsReportSettings
+        disquiet $ putTextLn $ prettyShowAnalysis analysis stanArgsReportSettings
         for_ stanArgsOutputFile (saveOutput analysis)
 
         -- report generation
@@ -101,7 +103,7 @@ runStan StanArgs{..} = do
                     , ..
                     }
             generateReport analysis config warnings stanEnv ProjectInfo{..}
-            infoMessage "Report is generated here -> stan.html"
+            disquiet $ infoMessage "Report is generated here -> stan.html"
 
         -- decide on exit status
         when
@@ -116,6 +118,8 @@ runStan StanArgs{..} = do
     indent :: Text -> Text
     indent = unlines . map ("    " <>) . lines
 
+    disquiet = unless (stanArgsQuiet == Quiet)
+
 runInspection :: InspectionArgs -> IO ()
 runInspection InspectionArgs{..} = case inspectionArgsId of
     Nothing  -> for_ inspections (putTextLn . prettyShowInspectionShort)
@@ -128,7 +132,7 @@ runInspection InspectionArgs{..} = case inspectionArgsId of
 runTomlToCli :: TomlToCliArgs -> IO ()
 runTomlToCli TomlToCliArgs{..} = do
     let useDefConfig = isNothing tomlToCliArgsFilePath
-    partialConfig <- getTomlConfig useDefConfig tomlToCliArgsFilePath
+    partialConfig <- getTomlConfig useDefConfig tomlToCliArgsFilePath Normal
     case finaliseConfig partialConfig of
         Result _ res -> putTextLn $ configToCliCommand res
         fiasco -> do
