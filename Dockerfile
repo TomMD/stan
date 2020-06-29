@@ -1,6 +1,6 @@
 # Taken from the shellcheck project
 # Build-only image
-FROM alpine AS build
+FROM alpine:3.10 AS build
 USER root
 WORKDIR /opt/stan
 
@@ -8,14 +8,16 @@ WORKDIR /opt/stan
 RUN apk update && \
         apk add \
             curl \
-            gcc g++ gmp-dev ncurses-dev libffi-dev make xz tar perl gcc build-base ncurses-dev ncurses-static
+            gcc g++ gmp-dev libffi-dev make xz tar perl gcc build-base ncurses-dev ncurses-static
 RUN ln -sf /usr/lib/libncursesw.so.6.2 /usr/lib/libncursesw.so.6 
 RUN ln -sf /usr/lib/libncursesw.so.6 /usr/lib/libtinfow.so.6
 RUN ln -sf /usr/lib/libtinfow.so.6 /usr/lib/libtinfow.so
 RUN ln -sf /usr/lib/libncursesw.a /usr/lib/libtinfow.a
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
-RUN ~/.ghcup/bin/ghcup install 8.8.3
+ARG ghc_version_arg=8.10.1
+ENV ghc_version=$ghc_version_arg
+RUN ~/.ghcup/bin/ghcup install $ghc_version
 RUN ~/.ghcup/bin/ghcup install-cabal 3.2.0.0
 ENV PATH="${PATH}:/root/.ghcup/bin"
 
