@@ -33,7 +33,6 @@ COPY test test
 RUN cabal build --write-ghc-environment-files=always Paths_Stan lib:stan
 # RUN cabal build --ghc-options="-optl-static -optl-pthread -split-sections -optc-Wl,--gc-sections -optlo-Os" --write-ghc-environment-files=always exe:stan
 RUN ghc -static -optl-static -optl-pthread -split-sections --make app/Main.hs -o stan
-RUN cp $(cabal exec which -- stan) ./stan
 
 RUN mkdir -p /out/bin && \
   cp stan /out/bin/
